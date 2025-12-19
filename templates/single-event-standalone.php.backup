@@ -1,0 +1,2195 @@
+<?php
+// phpcs:ignoreFile
+
+/**
+ * SINGLE EVENT PAGE TEMPLATE - STRICT MODE 100% DESIGN CONFORMANCE
+ * Route: /evento/{slug}/
+ * Design Reference: PAGE-FOR-CPT EVENT LISTING single page stylesheet by unicss
+ *
+ * @package Apollo_Events_Manager
+ */
+
+defined('ABSPATH') || exit;
+
+// Get event data
+$event_id = get_the_ID();
+$event_title = get_the_title();
+$event_description = get_the_content();
+
+// Get event meta data
+$event_start_date = get_post_meta($event_id, '_event_start_date', true);
+$event_end_date = get_post_meta($event_id, '_event_end_date', true);
+$event_start_time = get_post_meta($event_id, '_event_start_time', true);
+$event_end_time = get_post_meta($event_id, '_event_end_time', true);
+$event_banner = get_post_meta($event_id, '_event_banner', true);
+$event_youtube_url = get_post_meta($event_id, '_event_youtube_url', true);
+$event_ticket_url = get_post_meta($event_id, '_event_ticket_url', true);
+
+// Get venue data
+$event_local_ids = get_post_meta($event_id, '_event_local_ids', true);
+$venue_name = '';
+$venue_address = '';
+$venue_city = '';
+
+if ($event_local_ids) {
+    // Handle both single ID and comma-separated IDs
+    $local_ids = is_array($event_local_ids) ? $event_local_ids : explode(',', $event_local_ids);
+    $primary_local_id = trim($local_ids[0]);
+
+    if (is_numeric($primary_local_id)) {
+        $venue_name = get_post_meta($primary_local_id, '_local_name', true) ?: get_the_title($primary_local_id);
+        $venue_address = get_post_meta($primary_local_id, '_local_address', true);
+        $venue_city = get_post_meta($primary_local_id, '_local_city', true);
+    }
+}
+
+// Get DJ lineup with timetable
+$event_dj_ids = get_post_meta($event_id, '_event_dj_ids', true);
+$lineup = [];
+
+if ($event_dj_ids) {
+    $dj_ids = is_array($event_dj_ids) ? $event_dj_ids : explode(',', $event_dj_ids);
+
+    foreach ($dj_ids as $dj_id) {
+        $dj_id = trim($dj_id);
+        if (is_numeric($dj_id)) {
+            $dj_name = get_post_meta($dj_id, '_dj_name', true) ?: get_the_title($dj_id);
+            $dj_image = get_post_meta($dj_id, '_dj_image', true);
+            $dj_slug = get_post_field('post_name', $dj_id);
+
+            // Get DJ timetable for this event
+            $timetable = get_post_meta($event_id, '_event_timetable', true);
+            $dj_start_time = '';
+            $dj_end_time = '';
+
+            if ($timetable && is_array($timetable)) {
+                foreach ($timetable as $slot) {
+                    if (isset($slot['dj']) && $slot['dj'] == $dj_id) {
+                        $dj_start_time = isset($slot['start_time']) ? $slot['start_time'] : '';
+                        $dj_end_time = isset($slot['end_time']) ? $slot['end_time'] : '';
+                        break;
+                    }
+                }
+            }
+
+            if ($dj_name) {
+                $lineup[] = [
+                    'id' => $dj_id,
+                    'name' => $dj_name,
+                    'image' => $dj_image,
+                    'slug' => $dj_slug,
+                    'start_time' => $dj_start_time,
+                    'end_time' => $dj_end_time,
+                    'permalink' => get_permalink($dj_id)
+                ];
+            }
+        }
+    }
+}
+
+// Get promo images (up to 5)
+$promo_images = [];
+for ($i = 1; $i <= 5; $i++) {
+    $img = get_post_meta($event_id, '_event_promo_image_' . $i, true);
+    if ($img) {
+        if (is_numeric($img)) {
+            $img_url = wp_get_attachment_url($img);
+            if ($img_url) {
+                $promo_images[] = $img_url;
+            }
+        } else {
+            $promo_images[] = $img;
+        }
+    }
+}
+
+// Get venue images (up to 5)
+$venue_images = [];
+if ($primary_local_id) {
+    for ($i = 1; $i <= 5; $i++) {
+        $img = get_post_meta($primary_local_id, '_local_image_' . $i, true);
+        if ($img) {
+            if (is_numeric($img)) {
+                $img_url = wp_get_attachment_url($img);
+                if ($img_url) {
+                    $venue_images[] = $img_url;
+                }
+            } else {
+                $venue_images[] = $img;
+            }
+        }
+    }
+}
+
+// Get music tags
+$music_tags = wp_get_post_terms($event_id, 'event_sounds', ['fields' => 'names']);
+$music_tags = array_slice($music_tags, 0, 4); // Limit to 4 tags for marquee
+
+// Format date
+$formatted_date = '';
+if ($event_start_date) {
+    $date_obj = DateTime::createFromFormat('Y-m-d', $event_start_date);
+    if ($date_obj) {
+        $day = $date_obj->format('j');
+        $month_short = strtoupper(substr($date_obj->format('M'), 0, 3));
+        $year_short = $date_obj->format('y');
+        $formatted_date = "{$day} {$month_short} '{$year_short}";
+    }
+}
+
+// Get users who favorited this event
+global $wpdb;
+$favorited_users = $wpdb->get_results($wpdb->prepare(
+    "SELECT user_id FROM {$wpdb->usermeta}
+     WHERE meta_key = 'apollo_favorite_events'
+     AND meta_value LIKE %s",
+    '%"' . $event_id . '"%'
+));
+
+$interested_users = [];
+foreach ($favorited_users as $user_data) {
+    $user_id = $user_data->user_id;
+    $user_info = get_userdata($user_id);
+    if ($user_info) {
+        $avatar_url = get_avatar_url($user_id, ['size' => 100]);
+        $interested_users[] = [
+            'id' => $user_id,
+            'name' => $user_info->display_name,
+            'avatar' => $avatar_url
+        ];
+    }
+}
+
+$interested_count = count($interested_users);
+
+// Enqueue assets
+wp_enqueue_style('remixicon', 'https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css', [], '4.7.0');
+wp_enqueue_style('apollo-uni-css', 'https://assets.apollo.rio.br/uni.css', [], '2.0.0');
+
+// Output HTML
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5, user-scalable=yes">
+    <title><?php echo esc_html($event_title); ?> - Apollo::rio</title>
+    <link rel="icon" href="https://assets.apollo.rio.br/img/neon-green.webp" type="image/webp">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.7.0/fonts/remixicon.css" rel="stylesheet">
+    <!-- UNI.CSS (Apollo Global Design System - base utilities only) -->
+    <link rel="stylesheet" href="https://assets.apollo.rio.br/uni.css">
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent; corner-shape:squircle;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --font-primary: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+            --bg-main: #fff;
+            --bg-surface: #f5f5f5;
+            --text-primary: rgba(19, 21, 23, .85);
+            --text-secondary: rgba(19, 21, 23, .7);
+            --border-color: #e0e2e4;
+            --border-color-2: #e0e2e454;
+            --radius-main: 12px;
+            --radius-card: 16px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --card-shadow-light: rgba(0, 0, 0, 0.05);
+        }
+      i {margin:1px 0 -1px 0}
+
+        html, body {
+            font-family: var(--font-primary);
+            font-size: 15px;
+            color: var(--text-secondary);
+            background-color: #f2f2f2;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='a' width='20' height='20' patternTransform='scale(1.8)' patternUnits='userSpaceOnUse'%3E%3Crect width='100%25' height='100%25' fill='none'/%3E%3Cpath fill='none' stroke='rgba(0, 0, 0, 0.02)' d='M10 0v20M0 10h20'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='800%25' height='800%25' fill='url(%23a)'/%3E%3C/svg%3E");
+            -webkit-font-smoothing: antialiased;
+            scroll-behavior: smooth;
+        }
+
+        /* Mobile Container */
+        @media (min-width: 888px) {
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: flex-start;
+                min-height: 100vh;
+                padding: 5rem 0 0rem;
+            }
+            .mobile-container {
+                max-width: 500px;
+                width: 100%;
+                background: #fff;
+                box-shadow: 0 0 60px rgba(0,0,0,0.1);
+                border-radius: 2rem;
+                overflow: hidden;
+            }
+        }
+
+        @media (max-width: 888px) {
+            .mobile-container {
+                width: 100%;
+                min-height: 100vh;
+            }
+        }
+
+        /* Hero Section */
+        .hero-media {
+            position: relative;
+            width: 100%;
+            height: 75vh;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .hero-media iframe,
+        .hero-media img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        }
+
+        .hero-media iframe {
+            pointer-events: none;
+            transform: scale(1.5);
+
+        }
+
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.8) 100%);
+            z-index: 1;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        }
+
+        .hero-content {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 2rem 1.5rem;
+            z-index: 2;
+            color: white;
+        }
+
+        .event-tag-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.22rem .4rem 0.19rem .3rem;
+            background: linear-gradient(17deg, rgba(255,255,255,0.3), transparent);
+            backdrop-filter: blur(15px);
+            border-radius: 0.65rem;
+            border:1px solid #ffffff1a;
+            font-size: 0.54rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-bottom: 0.3rem;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+       & i {
+            font-size: 0.95rem;
+         margin: 0 -2px 0 2px;
+        }
+      }
+        .hero-title {
+            font-size: clamp(3.2rem, 8vw, 3.2rem);
+            font-weight: 900;
+            line-height: 1;
+            margin: 0.5rem 0;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        }
+
+       .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            font-size: 0.8rem;
+            font-weight: 400;
+          padding: 0px 0.2em 2em 0.2em;
+        margin:0 auto;
+      }
+
+        .hero-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+          & .yoha {margin-left:.8rem;}
+          & i {opacity:0.5; font-size:1.12rem;}
+        }
+
+        /* Event Body */
+        .event-body {
+            background: var(--bg-main);
+            border-radius: 2rem 2rem 0 0;
+            margin-top: -2.5rem;
+            position: relative;
+            z-index: 3;
+            padding: 10px 0px;
+        }
+
+        /* Quick Actions - APOLLO STYLE */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, auto);
+            gap: 0.33rem;
+            padding: 2rem 1.5rem;
+          aspec-ratio:1/1;
+        }
+
+        .quick-action {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0rem;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .quick-action:hover {
+            color: var(--text-primary);
+        }
+
+        .quick-action-icon {
+            width: 60px;
+            height: 60px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .quick-action-icon:hover {
+            background: var(--bg-surface);
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px var(--card-shadow-light);
+        }
+
+        .quick-action-icon i {
+            font-size: 1.5rem;
+            color: var(--text-primary);
+        }
+
+        .quick-action-label {
+            font-size: 0.65rem;
+          color:#ddddddcc;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            text-align: center;
+        }
+
+        /* RSVP Row with Avatar Explosion */
+        .rsvp-row {
+            padding: 1.2rem 2rem 4.5rem;
+          justify-content:right;
+                display: flex;
+        }
+
+        .avatars-explosion {
+            display: flex;
+          position:absolute;
+          right:115px;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 49%;
+          corner-shape:squircle;
+            border: 0px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            margin-left: -12px;
+            transition: transform 0.3s ease;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .avatar:first-child {
+            margin-left: 0;
+        }
+
+        .avatar:hover {
+            transform: scale(1.15) translateY(-4px);
+            z-index: 10;
+        }
+
+        .avatar-count {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 500;
+            border: 3px solid #fff;
+            margin-left: -15px;
+        }
+
+        .interested-text {
+            display: flex;
+          position:absolute;
+          right:-70px;
+          top:10px;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        }
+
+        /* Section Styles */
+        .section {display:relative;
+            padding: 2rem 1.5rem;
+          user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .section-title i {
+            font-size: 1.75rem;
+            opacity: 0.7;
+        }
+
+        /* Info Card */
+        .info-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-card);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-text {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        /* Music Tags Marquee */
+        .music-tags-marquee {
+            overflow: hidden;
+            white-space: nowrap;
+            margin-top: 1rem;
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+        }
+
+        .music-tags-track {
+            display: inline-flex;
+            gap: 1rem;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        .music-tag {
+            padding: 0.4rem 0.8rem;
+            background: transparent;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        /* Promo Gallery */
+        .promo-gallery-slider {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-card);
+            height: 300px;
+        }
+
+        .promo-track {
+            display: flex;
+            transition: transform 0.5s ease;
+            height: 100%;
+        }
+
+        .promo-slide {
+            flex-shrink: 0; padding: 0.6rem; border-radius: 8px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .promo-slide img { padding: 1rem; border-radius: 8px;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .promo-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 3rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+            text-shadow: 2px 2px 13px black;
+
+        }
+
+        .promo-prev, .promo-next {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #eeeeee1a;
+            backdrop-filter: blur(10px);
+            border: none;
+            color: #eeeeee80;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            transition: var(--transition);
+          text-shadow: 2px 2px 13px black;
+        }
+
+        .promo-prev:hover, .promo-next:hover {
+            background: rgba(0,0,0,0.7);
+        }
+
+        /* Lineup - APOLLO STYLE */
+        .lineup-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .lineup-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-card);
+
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: var(--transition);
+          min-height:85px;
+          padding:0 .5rem;
+        }
+
+        .lineup-card:hover {
+            box-shadow: 0 4px 12px var(--card-shadow-light);
+        }
+
+        .lineup-avatar-img {
+            width: auto;
+            height: 100%;
+          max-height:65px;
+            border-radius: 12px;
+            object-fit: cover;
+            flex-shrink: 0;
+
+        }
+
+        .lineup-avatar-fallback {
+            width: 64px;
+            height: 64px;
+            border-radius: 12px;
+            background: var(--bg-surface);
+            border: 0px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: var(--text-primary);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .lineup-info {
+            flex: 1;
+          margin-left:16px;
+      }
+
+        .lineup-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .dj-link {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .dj-link:hover {
+            color: var(--text-secondary);
+        }
+
+        .lineup-time {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Venue Images Slider - 5 IMAGES */
+        .local-images-slider {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-card);
+            height: 350px;
+          background: #000;
+            margin-bottom: 1.5rem;
+          z-index:15;
+        }
+
+        .local-images-track {
+            display: flex;
+            transition: transform 0.5s ease;
+            height: 100%;
+        }
+
+        .local-image {
+            flex-shrink: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .local-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .slider-nav {
+            position: absolute;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+
+        .slider-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .slider-dot.active {
+            background: white;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        /* Route Controls - APOLLO STYLE (EXACT MATCH) */
+        .route-controls {
+            display: flex;
+            gap: 0px;
+            margin-top: 1.5rem;
+        }
+
+        .route-input {
+            height: 48px;
+            border-radius: 12px 0px 0px 12px;
+            background-color: transparent;
+            border: 1px solid var(--border-color);border-right: none;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            gap: 10px;
+            flex: 1;
+            transition: var(--transition);
+        }
+
+        .route-input:focus-within {
+            border-color: var(--text-primary); border-right: none;
+            box-shadow: 0 0 0 2px var(--border-color-2);
+        }
+
+        .route-input input {
+            background: none;
+            border: none;
+            flex: 1;
+            font-size: 0.87rem;
+            color: var(--text-primary);
+            outline: none;
+
+
+        .route-input i {
+            font-size: 1.8rem;
+            opacity: 0.5;
+        } }
+
+        .route-button {
+            height: 48px;
+            padding: 6px 18px;
+            border-radius:12px;
+           text-transform: uppercase;
+            background:rgb(240, 240, 240);
+            color: #13131380;
+            border: 1px solid rgb(224, 226, 228); border-left: none;
+            font-weight: 600;
+          font-size:1.2rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+          transition: color .5s ease-in-out, filter .5s ease-in-out;
+       &:hover {background: var(--text-secondary); color:#fdfdfd;  filter: brightness(1.08);}
+          &:hover:active {background:#fff; color:#000;filter:brightness(1.8); transform:scale(1.02);}
+      }
+      /* Tickets Section - NO PRICES, NEUTRAL APOLLO STYLE */
+
+.ticket-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-card);
+    padding: 1rem;
+    margin-top:1.45rem;
+    text-decoration: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: left;
+    transition: var(--transition);
+  filter:contrast(0.8);
+  user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+&:hover {
+    transform: translateY(4px);
+    box-shadow: 0 10px 30px var(--card-shadow-light);
+    border: 1px solid #3434341a;
+  filter:contrast(1) brightness(1.02);}
+}
+
+.disabled {
+    cursor: default;
+    pointer-events: none;
+    touch-action: none;
+    transition: none;
+    opacity:.5;
+  filter:contrast(1) brightness(1);
+  &:hover{filter:contrast(1) brightness(1);}
+  &.ticket-name{opacity:.4}
+}
+
+
+.ticket-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--bg-surface);
+    border: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.ticket-icon i {
+    font-size: 1.75rem;
+    color: var(--text-primary);
+}
+
+.ticket-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.ticket-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+}
+
+.ticket-cta {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+        /* Apollo Coupon Detail */
+        .apollo-coupon-detail {
+            background: rgba(247, 148, 27, 0.08);
+            border: 1px dashed var(--border-color);
+            border-radius: 0px 0px 12px 12px;
+            padding: .5rem .6rem 0.3rem 0.6rem;
+            display: flex;
+            margin: -0.2rem auto 0.2rem auto;
+            align-items: center;
+            gap: 0.84rem;
+            font-size: 0.78rem;
+          corner-shape:squircle;
+              letter-spacing: .5px;
+    }
+
+      .apollo-coupon-detail span { margin:auto; align-text:center}
+
+        .apollo-coupon-detail .ri-coupon-3-line {
+            font-size: .99rem;
+          padding: .3rem 0rem;
+            color: var(--text-secondary);
+          transform:rotate(145deg);
+        }
+
+        .apollo-coupon-detail strong {
+          font-size: 0.75rem;
+          position:relative;
+          display:inline-flex;
+            font-weight: 800;
+            text-align: center;
+          margin:auto;
+            color: var(--text-primary);
+            letter-spacing: 1px;
+        }
+
+        .copy-code-mini {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            border-radius: 3px;
+            width: 17px;
+            height: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-left: auto;
+            transition: var(--transition);
+           transform:rotate(0deg);
+          & i {font-size:1.05rem}
+          & .ri-file-copy-fill{}
+        }
+
+        .copy-code-mini:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Secondary Image */
+        .secondary-image {
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+
+        .secondary-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Bottom Bar - APOLLO STYLE */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 1rem 1.5rem;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+            z-index: 100;
+            display: flex;
+            gap: 0.75rem;
+            border-radius: 22px 22px 0 0;
+        }
+
+        .bottom-btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: var(--radius-main);
+            border: 1px solid var(--border-color);
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            text-decoration: none;
+            background: var(--bg-main);
+            color: var(--text-primary);
+        }
+
+        .bottom-btn:active {
+            transform: scale(0.97);
+        }
+
+        .bottom-btn:hover {
+            background: var(--bg-surface);
+            border-color: var(--text-secondary);
+        }
+
+        .bottom-btn.primary {
+            background: var(--text-primary);
+            color: white;
+            border-color: var(--text-primary);
+        }
+
+        .bottom-btn.primary:hover {
+            background: var(--text-secondary);
+            border-color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero-media {
+                height: 60vh;
+            }
+
+            .quick-actions {
+                grid-template-columns: repeat(4, auto);
+                gap: 0rem;
+                padding: 0.1rem 1rem 0 1rem;
+              margin: 1.5rem auto 0px auto;
+            }
+             .rsvp-row {
+            padding: 2rem 2rem 2rem;
+               margin:0.7rem auto;
+
+        }
+            .tickets-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .interested-text {
+           right:-55px;}
+          .avatars-explosion {
+       right:70px;}
+
+            .promo-gallery-slider {
+                height: 200px;
+            }
+
+            .local-images-slider {
+                height: 250px;
+            }
+
+            .avatar {
+                width: 36px;
+                height: 36px;
+            }
+
+            .lineup-avatar-img,
+            .lineup-avatar-fallback {
+                width: 30%;
+                height: 60px;
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- @LAYOUT: MOBILE_CONTAINER (centered on desktop, fullwidth mobile) -->
+    <div class="mobile-container">
+
+        <!-- ================================================================
+             @BLOCK: HERO_MEDIA
+             @PHP: templates/partials/event-hero.php
+             @VARS: $youtube_url OR $featured_image_url (fallback)
+             ================================================================ -->
+        <div class="hero-media">
+             <div class="video-cover">
+    <?php if ($event_youtube_url): ?>
+    <iframe src="<?php echo esc_url($event_youtube_url); ?>" allow="autoplay; fullscreen" allowfullscreen="" frameborder="0"></iframe>
+    <?php elseif ($event_banner): ?>
+    <img src="<?php echo esc_url($event_banner); ?>" alt="<?php echo esc_attr($event_title); ?>">
+    <?php else: ?>
+    <img src="https://assets.apollo.rio.br/img/default-event.jpg" alt="Default Event">
+    <?php endif; ?>
+  </div>
+          <style>
+.hero-media {
+  position: relative;
+  width: 100%;
+  height: 75vh;
+  overflow: hidden;
+  background: #000;
+  border-radius: 20px;
+}
+
+.video-cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100vh;
+  min-width: 177.77vh;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+}
+
+.video-cover iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.3) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  z-index: 1;
+}
+
+.hero-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 2rem 1.5rem;
+  z-index: 2;
+  color: white;
+}
+</style>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 class="hero-title"><?php echo esc_html($event_title); ?></h1>
+                <div class="hero-meta">
+                    <?php if ($formatted_date): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-calendar-line"></i>
+                        <span><?php echo esc_html($formatted_date); ?></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($event_start_time && $event_end_time): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-time-line"></i>
+                        <span id="Hora"><?php echo esc_html($event_start_time); ?> - <?php echo esc_html($event_end_time); ?><font style="opacity:.7;font-weight:300; font-size:.81rem; vertical-align: bottom;">(GMT-03h00)</font></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($venue_name): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-map-pin-line"></i>
+                        <span><?php echo esc_html($venue_name); ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================
+             @BLOCK: EVENT_BODY
+             @PHP: templates/partials/event-content.php
+             ================================================================ -->
+        <div class="event-body">
+
+            <!-- ============================================================
+                 @WIDGET: QUICK_ACTIONS (Tickets, Lineup, Route, Interest)
+                 @PHP: templates/partials/event-quick-actions.php
+                 @VARS: $has_tickets, $has_lineup, $has_venue, $user_interested
+                 ============================================================ -->
+            <div class="quick-actions">
+                <a href="#route_TICKETS" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-ticket-2-line"></i>
+                    </div>
+                    <span class="quick-action-label">TICKETS</span>
+                </a>
+                <a href="#route_LINE" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-draft-line"></i>
+                    </div>
+                    <span class="quick-action-label">Line-up</span>
+                </a>
+                <a href="#route_ROUTE" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-treasure-map-line"></i>
+                    </div>
+                    <span class="quick-action-label">ROUTE</span>
+                </a>
+                <a href="#" class="quick-action" id="favoriteTrigger">
+                    <div class="quick-action-icon">
+                        <i class="ri-rocket-line"></i>
+                    </div>
+                    <span class="quick-action-label">Interesse</span>
+                </a>
+            </div>
+
+
+        <!-- ============================================================
+             @WIDGET: RSVP_AVATARS (Interested Users)
+             @PHP: templates/partials/event-rsvp-avatars.php
+             @VARS: $interested_users[] (array of user objects)
+             @VARS: $total_interested (int), $max_visible = 10
+             @LOOP: foreach(array_slice($interested_users, 0, $max_visible) as $user)
+             ============================================================ -->
+<div class="rsvp-row">
+    <div class="avatars-explosion">
+        <?php
+        $displayed_count = 0;
+        foreach (array_slice($interested_users, 0, 10) as $user):
+            $displayed_count++;
+        ?>
+        <div class="avatar" style="background-image: url('<?php echo esc_url($user['avatar']); ?>')"></div>
+        <?php endforeach; ?>
+
+        <?php if ($interested_count > 10): ?>
+        <div class="avatar-count">+<?php echo $interested_count - 10; ?></div>
+        <?php endif; ?>
+    </div>
+    <p class="interested-text" style="margin: 0 8px 0px 20px;">
+        <i class="ri-bar-chart-2-fill"></i> <span id="result"><?php echo $interested_count; ?></span>
+    </p>
+</div>
+
+<script>
+document.getElementById('favoriteTrigger').addEventListener('click', function(event) {
+  event.preventDefault();
+
+  const iconContainer = this.querySelector('.quick-action-icon');
+  const icon = iconContainer.querySelector('i');
+  const avatarsContainer = document.querySelector('.avatars-explosion');
+  const countEl = avatarsContainer.querySelector('.avatar-count');
+  const resultEl = document.getElementById('result');
+  const maxVisible = 10;
+
+  function updateResult() {
+    const visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+    const hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    resultEl.textContent = visibleCount + hiddenCount;
+  }
+
+  if (icon.classList.contains('ri-rocket-line')) {
+    // Favorite action
+    iconContainer.classList.add('fly-away');
+
+    setTimeout(() => {
+      iconContainer.classList.remove('fly-away');
+      icon.className = 'ri-ai-agent-fill fade-in';
+      iconContainer.style.borderColor = 'rgba(0,0,0,0.2)';
+    }, 1500);
+
+    let hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    let visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+
+    if (visibleCount < maxVisible) {
+      const newAvatar = document.createElement('div');
+      newAvatar.classList.add('avatar');
+      const gender = Math.random() < 0.5 ? 'men' : 'women';
+      const id = Math.floor(Math.random() * 99) + 1;
+      newAvatar.style.backgroundImage = `url('https://randomuser.me/api/portraits/${gender}/${id}.jpg')`;
+      avatarsContainer.insertBefore(newAvatar, countEl);
+    } else {
+      hiddenCount += 1;
+      countEl.textContent = `+${hiddenCount}`;
+    }
+
+    updateResult();
+  } else {
+    // Unfavorite action
+    let hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    let visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+    let total = visibleCount + hiddenCount;
+
+    if (total > 0) {
+      if (hiddenCount > 0) {
+        hiddenCount -= 1;
+        countEl.textContent = hiddenCount > 0 ? `+${hiddenCount}` : '';
+      } else if (visibleCount > 0) {
+        const lastAvatar = avatarsContainer.querySelector('.avatar:last-of-type');
+        if (lastAvatar) lastAvatar.remove();
+      }
+      updateResult();
+    }
+
+    icon.className = 'ri-rocket-line fade-in';
+  }
+});
+
+// Initial update
+const avatarsContainer = document.querySelector('.avatars-explosion');
+const countEl = avatarsContainer.querySelector('.avatar-count');
+const resultEl = document.getElementById('result');
+
+function initialUpdateResult() {
+  const visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+  const hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+  resultEl.textContent = visibleCount + hiddenCount;
+}
+
+initialUpdateResult();
+</script>
+
+
+            <!-- Info Section -->
+            <section class="section">
+                <h2 class="section-title">
+                    <i class="ri-brain-ai-3-fill"></i> Info
+                </h2>
+                <div class="info-card">
+                    <p class="info-text"><?php echo wp_kses_post(wpautop($event_description)); ?></p>
+                </div>
+                <?php if (!empty($music_tags)): ?>
+                <div class="music-tags-marquee">
+                    <div class="music-tags-track">
+                       <?php
+                       $tags_to_show = array_merge($music_tags, $music_tags); // Duplicate for infinite loop
+                       foreach ($tags_to_show as $tag):
+                       ?>
+                       <span class="music-tag"><?php echo esc_html($tag); ?></span>
+                       <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </section>
+
+<!-- Promo Gallery (max 5 Images) -->
+<?php if (!empty($promo_images)): ?>
+<div class="promo-gallery-slider">
+<div class="promo-track" id="promoTrack">
+
+<?php foreach ($promo_images as $index => $img_url): ?>
+<div class="promo-slide"> <img src="<?php echo esc_url($img_url); ?>" alt="Promo <?php echo $index + 1; ?>"></div>
+<?php endforeach; ?>
+</div>
+
+<div class="promo-controls">
+     <button class="promo-prev"><i class="ri-arrow-left-s-line"></i></button>
+     <button class="promo-next"><i class="ri-arrow-right-s-line"></i></button>
+</div>
+</div>
+<?php endif; ?>
+
+  <!-- DJ Lineup (5 DJs: photo, initials, photo, initials, photo) -->
+            <section class="section" id="route_LINE"><h2 class="section-title"><i class="ri-disc-line"></i> Line-up</h2><div class="lineup-list">
+<?php if (!empty($lineup)): ?>
+<?php foreach ($lineup as $dj): ?>
+<div class="lineup-card">
+<?php if ($dj['image']): ?>
+<img src="<?php echo esc_url($dj['image']); ?>" alt="<?php echo esc_attr($dj['name']); ?>" class="lineup-avatar-img">
+<?php else: ?>
+<div class="lineup-avatar-fallback"><?php echo esc_html(substr($dj['name'], 0, 2)); ?></div>
+<?php endif; ?>
+<div class="lineup-info">
+<h3 class="lineup-name"><a href="<?php echo esc_url(home_url('/dj/' . $dj['slug'] . '/')); ?>" target="_blank" class="dj-link"><?php echo esc_html($dj['name']); ?></a></h3>
+<?php if ($dj['start_time'] && $dj['end_time']): ?>
+<div class="lineup-time"><i class="ri-time-line"></i><span><?php echo esc_html($dj['start_time']); ?> - <?php echo esc_html($dj['end_time']); ?></span></div>
+<?php endif; ?>
+</div>
+</div>
+<?php endforeach; ?>
+<?php else: ?>
+<p>No DJs in lineup yet.</p>
+<?php endif; ?>
+
+</div>
+</section>
+
+<!-- Venue Section with 5 Images Infinite Carousel -->
+            <section class="section" id="route_ROUTE">
+                <h2 class="section-title">
+                    <i class="ri-map-pin-2-line"></i> <?php echo esc_html($venue_name ?: 'Local'); ?>
+                </h2>
+                <p style="margin:0.5rem 0 1.5rem 0; font-size:0.95rem;"><?php echo esc_html($venue_address ?: 'Endereço não disponível'); ?>S</p>
+
+<?php if (!empty($venue_images)): ?>
+<!-- Images Slider (max 5) -->
+<div class="local-images-slider">
+<div class="local-images-track" id="localTrack" style="transition: transform 0.5s; transform: translateX(-200%);">
+<?php foreach ($venue_images as $index => $img_url): ?>
+<div class="local-image">
+<img src="<?php echo esc_url($img_url); ?>" alt="Venue <?php echo $index + 1; ?>">
+</div>
+<?php endforeach; ?>
+</div>
+
+<div class="slider-nav" id="localDots"><div class="slider-dot"></div><div class="slider-dot"></div><div class="slider-dot active"></div><div class="slider-dot"></div><div class="slider-dot"></div></div>
+</div>
+<?php endif; ?>
+
+
+<div class="map-view" style="margin:00px auto 0px auto; z-index:0; background:green;width:100%; height:285px;border-radius:12px;background-image:url('https://img.freepik.com/premium-vector/city-map-scheme-background-flat-style-vector-illustration_833641-2300.jpg'); background-size: cover;background-repeat: no-repeat;background-position: center center; ">  </div>
+
+<!-- Route Input (Apollo Style - EXACT MATCH) -->
+<div class="route-controls" style="transform:translateY(-80px); padding:0 0.5rem;">
+ <div class="route-input glass">
+ <i class="ri-map-pin-line"></i>
+<input type="text" id="origin-input" placeholder="Seu endereço de partida">
+</div>
+
+<button id="route-btn" class="route-button"><i class="ri-send-plane-line"></i></button>
+</div>
+</section>
+
+
+<!-- Tickets Section - NO PRICES -->
+<section class="section" id="route_TICKETS">
+<h2 class="section-title">
+<i class="ri-ticket-2-line" style="margin:2px 0 -2px 0"></i> Acessos
+                </h2>
+
+<!-- 2 Ticket Cards - NO PRICES, only external link direction sender -->
+<div class="tickets-grid">
+<a href="<?php echo esc_url($event_ticket_url ?: '#'); ?>?ref=apollo.rio.br" class="ticket-card" target="_blank">
+<div class="ticket-icon"><i class="ri-ticket-line"></i></div>
+<div class="ticket-info">
+<h3 class="ticket-name"><span id="changingword" style="opacity: 1;">Entradas</span></h3><span class="ticket-cta">Acessar Bilheteria Digital →</span></div>
+</a>
+
+  <!-- Apollo Coupon Detail -->
+<div class="apollo-coupon-detail">
+<i class="ri-coupon-3-line"></i>
+<span>Verifique se o cupom <strong>APOLLO</strong> está ativo com desconto</span>
+<button class="copy-code-mini" onclick="copyPromoCode()">
+<i class="ri-file-copy-fill"></i>
+</button>
+</div>
+
+<!-- Apollo Lista Amiga -->
+<div class="ticket-card disabled">
+<div class="ticket-icon">
+<i class="ri-list-check"></i>
+</div>
+<div class="ticket-info">
+<h3 class="ticket-name">Lista Amiga</h3>
+<span class="ticket-cta">Ver Lista Amiga →</span>
+</div>
+</div>
+</div>
+</section>
+
+<!-- Final Event Image -->
+<?php if ($event_banner): ?>
+<section class="section">
+<div class="secondary-image">
+<img src="<?php echo esc_url($event_banner); ?>" alt="Event Final">
+</div>
+</section>
+<?php endif; ?>
+</div>
+
+<!-- Bottom Bar -->
+<div class="bottom-bar">
+<?php if ($event_ticket_url): ?>
+<a href="<?php echo esc_url($event_ticket_url); ?>" class="bottom-btn primary" id="bottomTicketBtn">
+<i class="ri-ticket-fill"></i>
+<span id="changingword">Tickets</span>
+</a>
+<?php endif; ?>
+
+<script>
+(function(){
+  var words = [
+    'Entradas',
+    'Ingressos',
+    'Billets',
+    'Ticket',
+    'Acessos',
+    'Biglietti'
+  ], i = 0;
+  var elem = document.getElementById('changingword');
+  // set initial word
+  if (elem) {
+    elem.textContent = words[i];
+  }
+  function fadeOut(el, duration, callback) {
+    el.style.opacity = 1;
+    var start = null;
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var progress = timestamp - start;
+      var fraction = progress / duration;
+      if (fraction < 1) {
+        el.style.opacity = 1 - fraction;
+        window.requestAnimationFrame(step);
+      } else {
+        el.style.opacity = 0;
+        if (callback) callback();
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
+  function fadeIn(el, duration, callback) {
+    el.style.opacity = 0;
+    el.style.display = ''; // reset any display none
+    var start = null;
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var progress = timestamp - start;
+      var fraction = progress / duration;
+      if (fraction < 1) {
+        el.style.opacity = fraction;
+        window.requestAnimationFrame(step);
+      } else {
+        el.style.opacity = 1;
+        if (callback) callback();
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
+  setInterval(function(){
+    if (!elem) return;
+    fadeOut(elem, 400, function(){
+      // after fadeOut
+      i = (i+1) % words.length;
+      elem.textContent = words[i];
+      fadeIn(elem, 400);
+    });
+  }, 4000);
+})();
+</script>
+
+<button class="bottom-btn secondary" id="bottomShareBtn">
+<i class="ri-share-forward-line"></i>
+</button>
+</div>
+</div>
+
+<script>
+        'use strict';
+        // Promo Gallery Slider
+        const promoTrack = document.getElementById('promoTrack');
+        const promoSlides = promoTrack?.children.length || 0;
+        let currentPromo = 0;
+        document.querySelector('.promo-prev')?.addEventListener('click', () => {
+            currentPromo = (currentPromo - 1 + promoSlides) % promoSlides;
+            promoTrack.style.transform = `translateX(-${currentPromo * 100}%)`;
+        });
+        document.querySelector('.promo-next')?.addEventListener('click', () => {
+            currentPromo = (currentPromo + 1) % promoSlides;
+            promoTrack.style.transform = `translateX(-${currentPromo * 100}%)`;
+        });
+        // Venue Images Slider (5 images with infinite loop)
+        const localTrack = document.getElementById('localTrack');
+        const localDots = document.getElementById('localDots');
+        if (localTrack && localTrack.children.length > 0) {
+            const slides = localTrack.children;
+            const slideCount = slides.length;
+            let currentSlide = 0;
+            // Create dots
+            for(let i = 0; i < slideCount; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('slider-dot');
+                if(i === 0) dot.classList.add('active');
+dot.addEventListener('click', () => goToSlide(i));
+localDots.appendChild(dot);
+            }
+            function goToSlide(index) {
+                currentSlide = index;
+                localTrack.style.transition = 'transform 0.5s ease';
+                localTrack.style.transform = `translateX(-${index * 100}%)`;
+                updateDots();
+            }
+          function updateDots() {   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentSlide);
+                });
+            }
+// Auto-advance with true infinite loop
+            setInterval(() => {
+                currentSlide++;
+if(currentSlide >= slideCount) {
+localTrack.style.transition = 'none';
+                    currentSlide = 0;
+localTrack.style.transform = `translateX(0)`;
+     localTrack.offsetHeight;
+setTimeout(() => {
+currentSlide = 1;
+ localTrack.style.transition = 'transform 0.5s ease';
+localTrack.style.transform = `translateX(-100%)`;
+updateDots();
+                    }, 50);
+                } else {
+                    goToSlide(currentSlide);
+                }
+            }, 4000);
+        }
+        // Route Button
+        const routeBtn = document.getElementById('route-btn');
+        if (routeBtn) { routeBtn.addEventListener('click', () => {
+                const originInput = document.getElementById('origin-input');
+                const origin = originInput.value;
+                if (origin) {
+                    const destination = encodeURIComponent('<?php echo esc_js($venue_address ?: 'Rio de Janeiro, RJ'); ?>'); window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${destination}`, '_blank');
+                } else {
+                    originInput.placeholder = 'Por favor, insira um endereço!';
+                    setTimeout(() => {
+                        originInput.placeholder = 'Seu endereço de partida';
+                    }, 2000);
+                }
+            });
+        }
+        // Copy Promo Code
+        function copyPromoCode() {
+            const code = 'APOLLO'; navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target.closest('.copy-code-mini');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="ri-check-line"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                }, 2000);
+            });
+        }
+ // Share Function
+document.getElementById('bottomShareBtn')?.addEventListener('click', () => {
+            if (navigator.share) {
+                navigator.share({
+                    title: '<?php echo esc_js($event_title); ?>',
+                    text: 'Confere esse evento no Apollo::rio!',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Link copiado!');
+            }
+        });
+ // Bottom Ticket Button Smooth Scroll
+document.getElementById('bottomTicketBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+document.getElementById('route_TICKETS').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+ </script>
+
+        <!-- ================================================================
+             @BLOCK: HERO_MEDIA
+             @PHP: templates/partials/event-hero.php
+             @VARS: $youtube_url OR $featured_image_url (fallback)
+             ================================================================ -->
+        <div class="hero-media">
+             <div class="video-cover">
+    <?php if ($event_youtube_url): ?>
+    <iframe src="<?php echo esc_url($event_youtube_url); ?>" allow="autoplay; fullscreen" allowfullscreen="" frameborder="0"></iframe>
+    <?php elseif ($event_banner): ?>
+    <img src="<?php echo esc_url($event_banner); ?>" alt="<?php echo esc_attr($event_title); ?>">
+    <?php else: ?>
+    <img src="https://assets.apollo.rio.br/img/default-event.jpg" alt="Default Event">
+    <?php endif; ?>
+  </div>
+          <style>
+.hero-media {
+  position: relative;
+  width: 100%;
+  height: 75vh;
+  overflow: hidden;
+  background: #000;
+  border-radius: 20px;
+}
+
+.video-cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;
+  min-height: 100vh;
+  min-width: 177.77vh;
+  transform: translate(-50%, -50%);
+  overflow: hidden;
+}
+
+.video-cover iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.3) 0%,
+    transparent 30%,
+    transparent 70%,
+    rgba(0,0,0,0.8) 100%
+  );
+  z-index: 1;
+}
+
+.hero-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 2rem 1.5rem;
+  z-index: 2;
+  color: white;
+}
+</style>
+            <div class="hero-overlay"></div>
+            <div class="hero-content">
+                <h1 class="hero-title"><?php echo esc_html($event_title); ?></h1>
+                <div class="hero-meta">
+                    <?php if ($formatted_date): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-calendar-line"></i>
+                        <span><?php echo esc_html($formatted_date); ?></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($event_start_time && $event_end_time): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-time-line"></i>
+                        <span id="Hora"><?php echo esc_html($event_start_time); ?> - <?php echo esc_html($event_end_time); ?><font style="opacity:.7;font-weight:300; font-size:.81rem; vertical-align: bottom;">(GMT-03h00)</font></span>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if ($venue_name): ?>
+                    <div class="hero-meta-item">
+                        <i class="ri-map-pin-line"></i>
+                        <span><?php echo esc_html($venue_name); ?></span>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================================================================
+             @BLOCK: EVENT_BODY
+             @PHP: templates/partials/event-content.php
+             ================================================================ -->
+        <div class="event-body">
+
+            <!-- ============================================================
+                 @WIDGET: QUICK_ACTIONS (Tickets, Lineup, Route, Interest)
+                 @PHP: templates/partials/event-quick-actions.php
+                 @VARS: $has_tickets, $has_lineup, $has_venue, $user_interested
+                 ============================================================ -->
+            <div class="quick-actions">
+                <a href="#route_TICKETS" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-ticket-2-line"></i>
+                    </div>
+                    <span class="quick-action-label">TICKETS</span>
+                </a>
+                <a href="#route_LINE" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-draft-line"></i>
+                    </div>
+                    <span class="quick-action-label">Line-up</span>
+                </a>
+                <a href="#route_ROUTE" class="quick-action">
+                    <div class="quick-action-icon">
+                        <i class="ri-treasure-map-line"></i>
+                    </div>
+                    <span class="quick-action-label">ROUTE</span>
+                </a>
+                <a href="#" class="quick-action" id="favoriteTrigger">
+                    <div class="quick-action-icon">
+                        <i class="ri-rocket-line"></i>
+                    </div>
+                    <span class="quick-action-label">Interesse</span>
+                </a>
+            </div>
+
+
+        <!-- ============================================================
+             @WIDGET: RSVP_AVATARS (Interested Users)
+             @PHP: templates/partials/event-rsvp-avatars.php
+             @VARS: $interested_users[] (array of user objects)
+             @VARS: $total_interested (int), $max_visible = 10
+             @LOOP: foreach(array_slice($interested_users, 0, $max_visible) as $user)
+             ============================================================ -->
+<div class="rsvp-row">
+    <div class="avatars-explosion">
+        <?php for ($i = 0; $i < min(10, $interested_count); $i++): ?>
+        <div class="avatar" style="background-image: url('https://randomuser.me/api/portraits/<?php echo $i % 2 ? 'men' : 'women'; ?>/<?php echo rand(1, 99); ?>.jpg')"></div>
+        <?php endfor; ?>
+        <?php if ($interested_count > 10): ?>
+        <div class="avatar-count">+<?php echo $interested_count - 10; ?></div>
+        <?php endif; ?>
+    </div>
+    <p class="interested-text">
+        <i class="ri-bar-chart-2-fill"></i> <span id="result"><?php echo $interested_count; ?></span>
+    </p>
+</div>
+
+<script>
+document.getElementById('favoriteTrigger').addEventListener('click', function(event) {
+  event.preventDefault();
+
+  const iconContainer = this.querySelector('.quick-action-icon');
+  const icon = iconContainer.querySelector('i');
+  const avatarsContainer = document.querySelector('.avatars-explosion');
+  const countEl = avatarsContainer.querySelector('.avatar-count');
+  const resultEl = document.getElementById('result');
+  const maxVisible = 10;
+
+  function updateResult() {
+    const visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+    const hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    resultEl.textContent = visibleCount + hiddenCount;
+  }
+
+  if (icon.classList.contains('ri-rocket-line')) {
+    // Favorite action
+    iconContainer.classList.add('fly-away');
+
+    setTimeout(() => {
+      iconContainer.classList.remove('fly-away');
+      icon.className = 'ri-ai-agent-fill fade-in';
+      iconContainer.style.borderColor = 'rgba(0,0,0,0.2)';
+    }, 1500);
+
+    let hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    let visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+
+    if (visibleCount < maxVisible) {
+      const newAvatar = document.createElement('div');
+      newAvatar.classList.add('avatar');
+      const gender = Math.random() < 0.5 ? 'men' : 'women';
+      const id = Math.floor(Math.random() * 99) + 1;
+      newAvatar.style.backgroundImage = `url('https://randomuser.me/api/portraits/${gender}/${id}.jpg')`;
+      avatarsContainer.insertBefore(newAvatar, countEl);
+    } else {
+      hiddenCount += 1;
+      countEl.textContent = `+${hiddenCount}`;
+    }
+
+    updateResult();
+  } else {
+    // Unfavorite action
+    let hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+    let visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+    let total = visibleCount + hiddenCount;
+
+    if (total > 0) {
+      if (hiddenCount > 0) {
+        hiddenCount -= 1;
+        countEl.textContent = hiddenCount > 0 ? `+${hiddenCount}` : '';
+      } else if (visibleCount > 0) {
+        const lastAvatar = avatarsContainer.querySelector('.avatar:last-of-type');
+        if (lastAvatar) lastAvatar.remove();
+      }
+      updateResult();
+    }
+
+    icon.className = 'ri-rocket-line fade-in';
+  }
+});
+
+// Initial update
+const avatarsContainer = document.querySelector('.avatars-explosion');
+const countEl = avatarsContainer.querySelector('.avatar-count');
+const resultEl = document.getElementById('result');
+
+function initialUpdateResult() {
+  const visibleCount = avatarsContainer.querySelectorAll('.avatar').length;
+  const hiddenCount = parseInt(countEl.textContent.replace('+', '')) || 0;
+  resultEl.textContent = visibleCount + hiddenCount;
+}
+
+initialUpdateResult();
+</script>
+
+
+
+            <!-- Info Section -->
+            <section class="section">
+                <h2 class="section-title">
+                    <i class="ri-brain-ai-3-fill"></i> Info
+                </h2>
+                <div class="info-card">
+                    <p class="info-text"><?php echo wp_kses_post(wpautop($event_description)); ?></p>
+                </div>
+                <?php if (!empty($music_tags)): ?>
+                <div class="music-tags-marquee">
+                    <div class="music-tags-track">
+                       <?php foreach (array_merge($music_tags, $music_tags) as $tag): ?>
+                       <span class="music-tag"><?php echo esc_html($tag); ?></span>
+                       <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </section>
+
+<!-- Promo Gallery (max 5 Images) -->
+<?php if (!empty($promo_images)): ?>
+<div class="promo-gallery-slider">
+<div class="promo-track" id="promoTrack">
+<?php foreach ($promo_images as $index => $img_url): ?>
+<div class="promo-slide"> <img src="<?php echo esc_url($img_url); ?>" alt="Promo <?php echo $index + 1; ?>"></div>
+<?php endforeach; ?>
+</div>
+
+<div class="promo-controls">
+     <button class="promo-prev"><i class="ri-arrow-left-s-line"></i></button>
+     <button class="promo-next"><i class="ri-arrow-right-s-line"></i></button>
+</div>
+</div>
+<?php endif; ?>
+
+  <!-- DJ Lineup -->
+            <section class="section" id="route_LINE"><h2 class="section-title"><i class="ri-disc-line"></i> Line-up</h2><div class="lineup-list">
+<?php if (!empty($lineup)): ?>
+<?php foreach ($lineup as $dj): ?>
+<div class="lineup-card">
+<?php if ($dj['image']): ?>
+<img src="<?php echo esc_url($dj['image']); ?>" alt="<?php echo esc_attr($dj['name']); ?>" class="lineup-avatar-img">
+<?php else: ?>
+<div class="lineup-avatar-fallback"><?php echo esc_html(substr($dj['name'], 0, 1)); ?></div>
+<?php endif; ?>
+<div class="lineup-info">
+<h3 class="lineup-name"><a href="<?php echo esc_url($dj['permalink']); ?>" target="_blank" class="dj-link"><?php echo esc_html($dj['name']); ?></a></h3>
+<div class="lineup-time"><i class="ri-time-line"></i><span><?php echo esc_html($event_start_time ?: 'TBA'); ?> - <?php echo esc_html($event_end_time ?: 'TBA'); ?></span></div>
+</div>
+</div>
+<?php endforeach; ?>
+<?php else: ?>
+<p>No DJs in lineup yet.</p>
+<?php endif; ?>
+</div>
+</section>
+
+<!-- Venue Section with Images -->
+            <section class="section" id="route_ROUTE">
+                <h2 class="section-title">
+                    <i class="ri-map-pin-2-line"></i> <?php echo esc_html($venue_name ?: 'Local'); ?>
+                </h2>
+                <p style="margin:0.5rem 0 1.5rem 0; font-size:0.95rem;"><?php echo esc_html($venue_address ?: 'Endereço não disponível'); ?></p>
+
+<?php if (!empty($venue_images)): ?>
+<!-- Images Slider -->
+<div class="local-images-slider">
+<div class="local-images-track" id="localTrack">
+<?php foreach ($venue_images as $index => $img_url): ?>
+<div class="local-image">
+<img src="<?php echo esc_url($img_url); ?>" alt="Venue <?php echo $index + 1; ?>">
+</div>
+<?php endforeach; ?>
+</div>
+
+<div class="slider-nav" id="localDots">
+<?php for ($i = 0; $i < count($venue_images); $i++): ?>
+<div class="slider-dot<?php echo $i === 0 ? ' active' : ''; ?>"></div>
+<?php endfor; ?>
+</div>
+</div>
+<?php endif; ?>
+
+<div class="map-view" style="margin:0px auto 0px auto; z-index:0; background:green;width:100%; height:285px;border-radius:12px;background-image:url('https://img.freepik.com/premium-vector/city-map-scheme-background-flat-style-vector-illustration_833641-2300.jpg'); background-size: cover;background-repeat: no-repeat;background-position: center center; ">  </div>
+
+<!-- Route Input -->
+<div class="route-controls" style="transform:translateY(-80px); padding:0 0.5rem;">
+ <div class="route-input glass">
+ <i class="ri-map-pin-line"></i>
+<input type="text" id="origin-input" placeholder="Seu endereço de partida">
+</div>
+
+<button id="route-btn" class="route-button"><i class="ri-send-plane-line"></i></button>
+</div>
+</section>
+
+<!-- Tickets Section -->
+<section class="section" id="route_TICKETS">
+<h2 class="section-title">
+<i class="ri-ticket-2-line" style="margin:2px 0 -2px 0"></i> Acessos
+                </h2>
+
+<!-- Ticket Cards -->
+<?php if ($event_ticket_url): ?>
+<a href="<?php echo esc_url($event_ticket_url); ?>?ref=apollo.rio.br" class="ticket-card" target="_blank">
+<div class="ticket-icon"><i class="ri-ticket-line"></i></div>
+<div class="ticket-info">
+<h3 class="ticket-name"><span id="changingword">Entradas</span></h3><span class="ticket-cta">Acessar Bilheteria Digital →</span></div>
+</a>
+
+  <!-- Apollo Coupon Detail -->
+<div class="apollo-coupon-detail">
+<i class="ri-coupon-3-line"></i>
+<span>Verifique se o cupom <strong>APOLLO</strong> está ativo com desconto</span>
+<button class="copy-code-mini" onclick="copyPromoCode()">
+<i class="ri-file-copy-fill"></i>
+</button>
+</div>
+<?php endif; ?>
+
+<!-- Apollo Lista Amiga -->
+<div class="ticket-card disabled">
+<div class="ticket-icon">
+<i class="ri-list-check"></i>
+</div>
+<div class="ticket-info">
+<h3 class="ticket-name">Lista Amiga</h3>
+<span class="ticket-cta">Ver Lista Amiga →</span>
+</div>
+</div>
+</section>
+
+<!-- Final Event Image -->
+<?php if ($event_banner): ?>
+<section class="section">
+<div class="secondary-image">
+<img src="<?php echo esc_url($event_banner); ?>" alt="Event Final">
+</div>
+</section>
+<?php endif; ?>
+</div>
+
+<!-- Bottom Bar -->
+<div class="bottom-bar">
+<?php if ($event_ticket_url): ?>
+<a href="<?php echo esc_url($event_ticket_url); ?>" class="bottom-btn primary" id="bottomTicketBtn">
+<i class="ri-ticket-fill"></i>
+<span id="changingword">Tickets</span>
+</a>
+<?php endif; ?>
+
+<script>
+(function(){
+  var words = [
+    'Entradas',
+    'Ingressos',
+    'Billets',
+    'Ticket',
+    'Acessos',
+    'Biglietti'
+  ], i = 0;
+  var elem = document.getElementById('changingword');
+  // set initial word
+  if (elem) {
+    elem.textContent = words[i];
+  }
+  function fadeOut(el, duration, callback) {
+    el.style.opacity = 1;
+    var start = null;
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var progress = timestamp - start;
+      var fraction = progress / duration;
+      if (fraction < 1) {
+        el.style.opacity = 1 - fraction;
+        window.requestAnimationFrame(step);
+      } else {
+        el.style.opacity = 0;
+        if (callback) callback();
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
+  function fadeIn(el, duration, callback) {
+    el.style.opacity = 0;
+    el.style.display = '';
+    var start = null;
+    function step(timestamp) {
+      if (!start) start = timestamp;
+      var progress = timestamp - start;
+      var fraction = progress / duration;
+      if (fraction < 1) {
+        el.style.opacity = fraction;
+        window.requestAnimationFrame(step);
+      } else {
+        el.style.opacity = 1;
+        if (callback) callback();
+      }
+    }
+    window.requestAnimationFrame(step);
+  }
+  setInterval(function(){
+    if (!elem) return;
+    fadeOut(elem, 400, function(){
+      i = (i+1) % words.length;
+      elem.textContent = words[i];
+      fadeIn(elem, 400);
+    });
+  }, 4000);
+})();
+</script>
+
+<button class="bottom-btn secondary" id="bottomShareBtn">
+<i class="ri-share-forward-line"></i>
+</button>
+</div>
+</div>
+
+<script>
+        'use strict';
+        // Promo Gallery Slider
+        const promoTrack = document.getElementById('promoTrack');
+        const promoSlides = promoTrack?.children.length || 0;
+        let currentPromo = 0;
+        document.querySelector('.promo-prev')?.addEventListener('click', () => {
+            currentPromo = (currentPromo - 1 + promoSlides) % promoSlides;
+            promoTrack.style.transform = `translateX(-${currentPromo * 100}%)`;
+        });
+        document.querySelector('.promo-next')?.addEventListener('click', () => {
+            currentPromo = (currentPromo + 1) % promoSlides;
+            promoTrack.style.transform = `translateX(-${currentPromo * 100}%)`;
+        });
+        // Venue Images Slider (5 images with infinite loop)
+        const localTrack = document.getElementById('localTrack');
+        const localDots = document.getElementById('localDots');
+        if (localTrack && localTrack.children.length > 0) {
+            const slides = localTrack.children;
+            const slideCount = slides.length;
+            let currentSlide = 0;
+            // Create dots
+            for(let i = 0; i < slideCount; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('slider-dot');
+                if(i === 0) dot.classList.add('active');
+dot.addEventListener('click', () => goToSlide(i));
+localDots.appendChild(dot);
+            }
+            function goToSlide(index) {
+                currentSlide = index;
+                localTrack.style.transition = 'transform 0.5s ease';
+                localTrack.style.transform = `translateX(-${index * 100}%)`;
+                updateDots();
+            }
+          function updateDots() {   document.querySelectorAll('.slider-dot').forEach((dot, i) => {
+                    dot.classList.toggle('active', i === currentSlide);
+                });
+            }
+// Auto-advance with true infinite loop
+            setInterval(() => {
+                currentSlide++;
+if(currentSlide >= slideCount) {
+localTrack.style.transition = 'none';
+                    currentSlide = 0;
+localTrack.style.transform = `translateX(0)`;
+     localTrack.offsetHeight;
+setTimeout(() => {
+currentSlide = 1;
+ localTrack.style.transition = 'transform 0.5s ease';
+localTrack.style.transform = `translateX(-100%)`;
+updateDots();
+                    }, 50);
+                } else {
+                    goToSlide(currentSlide);
+                }
+            }, 4000);
+        }
+        // Route Button
+        const routeBtn = document.getElementById('route-btn');
+        if (routeBtn) { routeBtn.addEventListener('click', () => {
+                const originInput = document.getElementById('origin-input');
+                const origin = originInput.value;
+                if (origin) {
+                    const destination = encodeURIComponent('<?php echo esc_js($venue_address ?: 'Rio de Janeiro, RJ'); ?>'); window.open(`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${destination}`, '_blank');
+                } else {
+                    originInput.placeholder = 'Por favor, insira um endereço!';
+                    setTimeout(() => {
+                        originInput.placeholder = 'Seu endereço de partida';
+                    }, 2000);
+                }
+            });
+        }
+        // Copy Promo Code
+        function copyPromoCode() {
+            const code = 'APOLLO'; navigator.clipboard.writeText(code).then(() => {
+                const btn = event.target.closest('.copy-code-mini');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="ri-check-line"></i>';
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                }, 2000);
+            });
+        }
+ // Share Function
+document.getElementById('bottomShareBtn')?.addEventListener('click', () => {
+            if (navigator.share) {
+                navigator.share({
+                    title: '<?php echo esc_js($event_title); ?>',
+                    text: 'Confere esse evento no Apollo::rio!',
+                    url: window.location.href
+                });
+            } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Link copiado!');
+            }
+        });
+ // Bottom Ticket Button Smooth Scroll
+document.getElementById('bottomTicketBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+document.getElementById('route_TICKETS').scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        });
+ </script>
+
+</body></html><?php

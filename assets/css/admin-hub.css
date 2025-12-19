@@ -1,0 +1,314 @@
+/**
+ * Apollo Events Manager - Admin Hub Styles
+ */
+
+.apollo-hub-wrap {
+	max-width: 1400px;
+	margin: 20px 20px 0 0;
+}
+
+.apollo-hub-wrap h1 {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 24px;
+	font-weight: 600;
+}
+
+.apollo-hub-wrap h1 .dashicons {
+	font-size: 28px;
+	width: 28px;
+	height: 28px;
+}
+
+/* Tabs */
+.apollo-hub-tabs {
+	margin-bottom: 0;
+	border-bottom: 1px solid #c3c4c7;
+}
+
+.apollo-hub-tabs .nav-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	font-size: 13px;
+}
+
+.apollo-hub-tabs .nav-tab .dashicons {
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.apollo-hub-tabs .nav-tab-active {
+	background: #fff;
+	border-bottom-color: #fff;
+}
+
+/* Content */
+.apollo-hub-content {
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-top: none;
+	padding: 20px;
+}
+
+.apollo-hub-section h2 {
+	font-size: 20px;
+	font-weight: 600;
+	margin: 0 0 10px;
+	padding-bottom: 10px;
+	border-bottom: 2px solid #2271b1;
+}
+
+.apollo-hub-section h3 {
+	font-size: 16px;
+	font-weight: 600;
+	margin: 25px 0 10px;
+	color: #1d2327;
+}
+
+/* Intro Cards */
+.apollo-intro-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 20px;
+	margin: 20px 0;
+}
+
+.apollo-intro-card {
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px;
+}
+
+.apollo-intro-card h3 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 10px;
+	font-size: 16px;
+	color: #1d2327;
+}
+
+.apollo-intro-card h3 .dashicons {
+	color: #2271b1;
+}
+
+.apollo-intro-card p {
+	margin: 0 0 15px;
+	color: #50575e;
+}
+
+.apollo-intro-card ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.apollo-intro-card ul li {
+	margin-bottom: 5px;
+}
+
+.apollo-intro-card code {
+	background: #fff;
+	padding: 2px 6px;
+	border-radius: 3px;
+	font-size: 12px;
+}
+
+/* Steps */
+.apollo-steps {
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px 20px 20px 40px;
+	margin: 20px 0;
+}
+
+.apollo-steps li {
+	margin-bottom: 15px;
+	padding-left: 10px;
+}
+
+.apollo-steps li:last-child {
+	margin-bottom: 0;
+}
+
+/* Notice */
+.apollo-notice {
+	padding: 15px 20px;
+	border-radius: 4px;
+	margin: 20px 0;
+}
+
+.apollo-notice h4 {
+	margin: 0 0 8px;
+}
+
+.apollo-notice p {
+	margin: 0;
+}
+
+.apollo-notice-info {
+	background: #e7f3ff;
+	border-left: 4px solid #2271b1;
+}
+
+.apollo-notice-warning {
+	background: #fff8e5;
+	border-left: 4px solid #dba617;
+}
+
+/* Tables */
+.apollo-shortcode-table {
+	margin-top: 10px;
+}
+
+.apollo-shortcode-table code {
+	background: #f0f0f1;
+	padding: 4px 8px;
+	border-radius: 3px;
+	font-size: 12px;
+	white-space: nowrap;
+}
+
+.apollo-shortcode-table td {
+	vertical-align: middle;
+}
+
+.apollo-shortcode-category,
+.apollo-placeholder-category,
+.apollo-metakeys-category {
+	margin-bottom: 30px;
+}
+
+/* Copy Button */
+.apollo-copy-btn {
+	padding: 4px 8px !important;
+	min-height: 28px !important;
+}
+
+.apollo-copy-btn .dashicons {
+	font-size: 14px;
+	width: 14px;
+	height: 14px;
+	line-height: 1;
+}
+
+/* Forms */
+.apollo-form-card {
+	background: #f6f7f7;
+	border: 1px solid #c3c4c7;
+	border-radius: 4px;
+	padding: 20px;
+	margin-bottom: 20px;
+}
+
+.apollo-form-card h3 {
+	margin: 0 0 10px;
+}
+
+.apollo-form-card > p {
+	margin: 0 0 15px;
+	color: #50575e;
+}
+
+.apollo-form-details {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 15px;
+	margin-bottom: 15px;
+}
+
+.apollo-form-detail {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.apollo-form-detail strong {
+	color: #1d2327;
+}
+
+.apollo-form-detail code {
+	background: #fff;
+	padding: 4px 8px;
+	border-radius: 3px;
+}
+
+.apollo-form-fields {
+	margin-top: 15px;
+}
+
+.apollo-form-fields summary {
+	cursor: pointer;
+	color: #2271b1;
+	font-weight: 500;
+}
+
+.apollo-form-fields[open] summary {
+	margin-bottom: 10px;
+}
+
+.apollo-form-fields table {
+	margin-top: 10px;
+}
+
+/* Roles */
+.apollo-roles-matrix {
+	overflow-x: auto;
+	margin: 20px 0;
+}
+
+.apollo-roles-table th,
+.apollo-roles-table td {
+	text-align: center;
+	vertical-align: middle;
+}
+
+.apollo-roles-table th:first-child,
+.apollo-roles-table td:first-child {
+	text-align: left;
+}
+
+.apollo-roles-table .cap-yes {
+	background: #e6ffe6;
+}
+
+.apollo-roles-table .cap-no {
+	background: #ffe6e6;
+}
+
+/* Settings */
+.apollo-hub-section .form-table th {
+	width: 200px;
+}
+
+.apollo-hub-section .form-table td fieldset label {
+	display: block;
+	margin-bottom: 8px;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+	.apollo-hub-tabs .nav-tab {
+		padding: 8px 12px;
+		font-size: 12px;
+	}
+
+	.apollo-hub-tabs .nav-tab span:not(.dashicons) {
+		display: none;
+	}
+
+	.apollo-intro-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.apollo-form-details {
+		grid-template-columns: 1fr;
+	}
+}

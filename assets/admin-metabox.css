@@ -1,0 +1,498 @@
+/**
+ * Apollo Events Manager - Admin Metabox Styles
+ */
+
+.apollo-metabox-container {
+	padding: 15px;
+}
+
+.apollo-field-group {
+	margin-bottom: 30px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid #ddd;
+}
+
+.apollo-field-group:last-child {
+	border-bottom: none;
+}
+
+.apollo-field-group h3 {
+	margin: 0 0 15px 0;
+	padding: 10px 0;
+	font-size: 15px;
+	border-bottom: 2px solid #2271b1;
+	color: #1d2327;
+}
+
+.apollo-field {
+	margin-bottom: 20px;
+}
+
+.apollo-field label {
+	display: block;
+	margin-bottom: 8px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.apollo-field-controls {
+	position: relative;
+}
+
+.apollo-field-controls select.widefat {
+	max-width: 100%;
+	margin-bottom: 10px;
+}
+
+.apollo-field-controls .button {
+	margin-right: 5px;
+}
+
+.apollo-field-controls .description {
+	margin-top: 5px;
+	color: #646970;
+	font-style: italic;
+}
+
+/* Timetable Table */
+#apollo_timetable_table {
+	margin-top: 15px;
+}
+
+#apollo_timetable_table input[type="time"] {
+	width: 100%;
+	padding: 5px 8px;
+	font-size: 14px;
+}
+
+#apollo_timetable_empty {
+	margin: 15px 0;
+	text-align: center;
+}
+
+/* Timetable Order Controls */
+.apollo-order-number {
+	display: inline-block;
+	font-weight: 700;
+	color: #2271b1;
+	font-size: 14px;
+	min-width: 30px;
+	text-align: center;
+}
+
+.apollo-order-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	justify-content: center;
+}
+
+.apollo-drag-handle {
+	cursor: move;
+	cursor: grab;
+	color: #646970;
+	font-size: 18px;
+	padding: 4px;
+	transition: color 0.2s;
+}
+
+.apollo-drag-handle:hover {
+	color: #2271b1;
+	cursor: grabbing;
+}
+
+.apollo-drag-handle:active {
+	cursor: grabbing;
+}
+
+.apollo-move-up,
+.apollo-move-down {
+	padding: 2px 6px !important;
+	min-width: 28px;
+	height: 28px;
+	line-height: 1;
+}
+
+.apollo-move-up .dashicons,
+.apollo-move-down .dashicons {
+	margin: 0;
+	font-size: 16px;
+	width: 16px;
+	height: 16px;
+}
+
+.apollo-timetable-row {
+	cursor: move;
+	transition: background-color 0.2s;
+}
+
+.apollo-timetable-row:hover {
+	background-color: #f6f7f7;
+}
+
+/* Sortable.js Styles */
+.apollo-sortable-ghost {
+	opacity: 0.4;
+	background-color: #f0f6fc;
+}
+
+.apollo-sortable-chosen {
+	background-color: #e5f5fa;
+}
+
+.apollo-sortable-drag {
+	opacity: 0.8;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Touch-friendly drag handle */
+@media (max-width: 782px) {
+	.apollo-drag-handle {
+		font-size: 24px;
+		padding: 8px;
+	}
+
+	.apollo-move-up,
+	.apollo-move-down {
+		min-width: 36px;
+		height: 36px;
+		padding: 4px 8px !important;
+	}
+
+	.apollo-order-controls {
+		gap: 8px;
+	}
+}
+
+/* Dialog Forms */
+.ui-dialog .ui-dialog-content {
+	padding: 20px;
+}
+
+.ui-dialog input[type="text"],
+.ui-dialog input[type="url"] {
+	width: 100%;
+	padding: 8px 10px;
+	font-size: 14px;
+}
+
+.ui-dialog label {
+	display: block;
+	margin-bottom: 5px;
+	font-weight: 600;
+}
+
+.ui-dialog p {
+	margin-bottom: 15px;
+}
+
+.ui-dialog p:last-of-type {
+	margin-bottom: 0;
+}
+
+.ui-dialog .description {
+	font-size: 13px;
+	color: #646970;
+	font-style: italic;
+}
+
+/* Messages in dialogs */
+#apollo_dj_form_message,
+#apollo_local_form_message {
+	padding: 10px;
+	border-left: 4px solid #72aee6;
+	background: #f0f6fc;
+	margin-top: 15px;
+}
+
+#apollo_dj_form_message.notice-error,
+#apollo_local_form_message.notice-error {
+	border-left-color: #d63638;
+	background: #fcf0f1;
+}
+
+#apollo_dj_form_message.notice-success,
+#apollo_local_form_message.notice-success {
+	border-left-color: #00a32a;
+	background: #f0f6fc;
+}
+
+#apollo_dj_form_message p,
+#apollo_local_form_message p {
+	margin: 0;
+}
+
+/* Buttons with dashicons */
+.button .dashicons {
+	vertical-align: middle;
+	margin-right: 5px;
+	margin-top: -2px;
+}
+
+/* Select multiple styling */
+select[multiple] {
+	height: auto !important;
+	min-height: 150px;
+}
+
+select[multiple] option {
+	padding: 6px 10px;
+}
+
+/* Enhanced Select Component (ShadCN Style) */
+.apollo-enhanced-select {
+	position: relative;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	background: #fff;
+	margin-bottom: 10px;
+	max-height: 400px;
+	display: flex;
+	flex-direction: column;
+}
+
+.apollo-select-search {
+	position: relative;
+	padding: 8px 12px;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.apollo-select-search input {
+	width: 100%;
+	padding: 6px 28px 6px 8px;
+	border: none;
+	outline: none;
+	font-size: 14px;
+	background: transparent;
+}
+
+.apollo-select-search i {
+	position: absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #6b7280;
+	font-size: 16px;
+}
+
+.apollo-select-list {
+	max-height: 400px;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Single select (Local) - better layout */
+.apollo-single-select .apollo-select-list {
+	max-height: 350px;
+}
+
+.apollo-single-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.apollo-select-item {
+	display: flex;
+	align-items: center;
+	padding: 10px 12px;
+	margin: 2px 0;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, transform 0.15s ease;
+	position: relative;
+	min-height: 40px;
+	flex-shrink: 0;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.apollo-select-item:hover {
+	background-color: #f3f4f6;
+	transform: translateX(2px);
+}
+
+.apollo-select-item.selected {
+	background-color: #eff6ff;
+	border-left: 3px solid #3b82f6;
+}
+
+.apollo-select-item input[type="checkbox"],
+.apollo-select-item input[type="radio"] {
+	margin-right: 8px;
+	cursor: pointer;
+}
+
+.apollo-select-item-label {
+	flex: 1;
+	font-size: 14px;
+	color: #1f2937;
+}
+
+.apollo-check-icon {
+	color: #3b82f6;
+	font-size: 18px;
+	margin-left: auto;
+}
+
+.apollo-select-footer {
+	padding: 8px 12px;
+	border-top: 1px solid #e5e7eb;
+	background: #f9fafb;
+	font-size: 12px;
+	color: #6b7280;
+}
+
+.apollo-selected-count {
+	font-weight: 500;
+}
+
+/* Multi Image Input */
+.apollo-multi-image-input {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.apollo-image-input-row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.apollo-image-input-row input {
+	flex: 1;
+}
+
+.apollo-image-input-row .button {
+	min-width: 40px;
+	padding: 6px 12px;
+}
+
+/* Motion.dev Animations */
+[data-motion-group="true"] {
+	animation: fadeInUp 0.3s ease-out;
+}
+
+[data-motion-select="true"] {
+	animation: fadeIn 0.2s ease-out;
+}
+
+[data-motion-input="true"] {
+	transition: all 0.2s ease;
+}
+
+[data-motion-input="true"]:focus-within {
+	transform: scale(1.01);
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Image Preview Modal */
+.apollo-image-preview-modal {
+	display: none;
+	position: fixed;
+	z-index: 100000;
+	left: 0;
+	top: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.8);
+	animation: fadeIn 0.2s ease-out;
+}
+
+.apollo-image-preview-modal.active {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.apollo-image-preview-content {
+	max-width: 90%;
+	max-height: 90%;
+	position: relative;
+	animation: scaleIn 0.2s ease-out;
+}
+
+.apollo-image-preview-content img {
+	max-width: 100%;
+	max-height: 90vh;
+	border-radius: 8px;
+	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.apollo-image-preview-close {
+	position: absolute;
+	top: -40px;
+	right: 0;
+	background: #fff;
+	border: none;
+	border-radius: 50%;
+	width: 36px;
+	height: 36px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 20px;
+	color: #1f2937;
+	transition: transform 0.2s ease;
+}
+
+.apollo-image-preview-close:hover {
+	transform: rotate(90deg);
+}
+
+@keyframes scaleIn {
+	from {
+		transform: scale(0.9);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+/* Responsive */
+@media (max-width: 782px) {
+	.apollo-metabox-container {
+		padding: 10px;
+	}
+
+	.apollo-field-controls .button {
+		display: block;
+		width: 100%;
+		margin-bottom: 10px;
+	}
+
+	.apollo-enhanced-select {
+		max-height: 300px;
+	}
+
+	.apollo-select-list {
+		max-height: 200px;
+	}
+}

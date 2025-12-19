@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+	IMPORTANT: Do NOT override uni.css styles for event_listing
+	uni.css from https://assets.apollo.rio.br/uni.css is the main styling
+	Tailwind is only for additional components, NOT for event cards
+*/

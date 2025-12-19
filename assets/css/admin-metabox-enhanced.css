@@ -1,0 +1,179 @@
+/**
+ * Admin Metabox Enhanced Styles
+ * TODO 102-103: ShadCN-style components for metaboxes
+ *
+ * @package Apollo_Events_Manager
+ * @version 0.1.0
+ */
+
+/* TODO 103: Tab-style metabox sections */
+.apollo-metabox-tabs {
+	display: flex;
+	gap: 0.5rem;
+	border-bottom: 2px solid var(--border-color, #e0e2e4);
+	margin-bottom: 1.5rem;
+}
+
+.apollo-metabox-tab {
+	padding: 0.75rem 1.5rem;
+	background: transparent;
+	border: none;
+	border-bottom: 3px solid transparent;
+	color: var(--text-secondary, #666);
+	cursor: pointer;
+	font-weight: 500;
+	transition: all 0.2s ease;
+}
+
+.apollo-metabox-tab:hover {
+	color: var(--text-primary, #333);
+	background: var(--bg-surface, #f5f5f5);
+}
+
+.apollo-metabox-tab.active {
+	color: var(--vermelho, #fd5c02);
+	border-bottom-color: var(--vermelho, #fd5c02);
+}
+
+.apollo-metabox-content {
+	display: none;
+}
+
+.apollo-metabox-content.active {
+	display: block;
+	animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* TODO 102: ShadCN-style inputs */
+.apollo-input,
+.apollo-textarea,
+.apollo-select {
+	width: 100%;
+	padding: 0.625rem 0.875rem;
+	border: 1px solid var(--border-color, #e0e2e4);
+	border-radius: 8px;
+	font-size: 0.9375rem;
+	transition: all 0.2s ease;
+	background: #fff;
+}
+
+.apollo-input:focus,
+.apollo-textarea:focus,
+.apollo-select:focus {
+	outline: none;
+	border-color: var(--vermelho, #fd5c02);
+	box-shadow: 0 0 0 3px rgba(253, 92, 2, 0.1);
+}
+
+/* TODO 104: ShadCN-style select */
+.apollo-select-wrapper {
+	position: relative;
+}
+
+.apollo-select-wrapper::after {
+	content: '\ea4e';
+	font-family: 'remixicon';
+	position: absolute;
+	right: 0.875rem;
+	top: 50%;
+	transform: translateY(-50%);
+	pointer-events: none;
+	color: var(--text-secondary, #666);
+}
+
+.apollo-select {
+	appearance: none;
+	padding-right: 2.5rem;
+}
+
+/* TODO 105: Validation animations */
+.apollo-input.error,
+.apollo-textarea.error,
+.apollo-select.error {
+	border-color: #dc3545;
+	animation: shake 0.3s ease;
+}
+
+.apollo-input.success,
+.apollo-textarea.success,
+.apollo-select.success {
+	border-color: #28a745;
+}
+
+@keyframes shake {
+	0%, 100% { transform: translateX(0); }
+	25% { transform: translateX(-5px); }
+	75% { transform: translateX(5px); }
+}
+
+.apollo-field-error {
+	color: #dc3545;
+	font-size: 0.875rem;
+	margin-top: 0.25rem;
+	animation: slideDown 0.2s ease;
+}
+
+.apollo-field-success {
+	color: #28a745;
+	font-size: 0.875rem;
+	margin-top: 0.25rem;
+	animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+	from { opacity: 0; transform: translateY(-5px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+/* Label enhancements */
+.apollo-label {
+	display: block;
+	font-weight: 500;
+	margin-bottom: 0.5rem;
+	color: var(--text-primary, #333);
+	font-size: 0.9375rem;
+}
+
+.apollo-label-required::after {
+	content: ' *';
+	color: #dc3545;
+}
+
+/* Field groups */
+.apollo-field-group {
+	margin-bottom: 1.5rem;
+}
+
+.apollo-field-group-inline {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 1rem;
+}
+
+/* Card-style metabox */
+.apollo-metabox-card {
+	background: #fff;
+	border: 1px solid var(--border-color, #e0e2e4);
+	border-radius: 8px;
+	padding: 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.apollo-metabox-card-title {
+	font-size: 1.125rem;
+	font-weight: 600;
+	margin-bottom: 1rem;
+	color: var(--text-primary, #333);
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.apollo-metabox-card-title i {
+	color: var(--vermelho, #fd5c02);
+}

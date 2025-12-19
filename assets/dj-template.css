@@ -1,0 +1,264 @@
+/**
+ * Apollo Events Manager - DJ Template Styles
+ * Refactored from inline styles to CSS blocks
+ * Based on CodePen yyerQyg
+ */
+
+/* ============================================
+	BENTO GRID - Sem border-radius, linhas estilo Tetris
+	============================================ */
+.apollo-dj-single .bento-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	gap: 0;
+	margin: 0;
+	padding: 0;
+	border: 2px solid #000;
+}
+
+.apollo-dj-single .bento-cell {
+	border: 2px solid #000;
+	border-radius: 0;
+	padding: 20px;
+	background: var(--bg-primary, #fff);
+	position: relative;
+	overflow: hidden;
+}
+
+/* Linhas de borda começando das bordas da página */
+.apollo-dj-single .bento-cell::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	background: #000;
+	z-index: 1;
+}
+
+.apollo-dj-single .bento-cell::after {
+	content: '';
+	position: absolute;
+	bottom: 0;
+	right: 0;
+	width: 2px;
+	height: 100%;
+	background: #000;
+	z-index: 1;
+}
+
+/* ============================================
+	VINYL RECORD PLAYER - CodePen wBMZYwY
+	============================================ */
+.apollo-dj-single .vinyl-container {
+	position: relative;
+	width: 100%;
+	max-width: 400px;
+	margin: 0 auto;
+	aspect-ratio: 1;
+}
+
+.apollo-dj-single .vinyl-record {
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	background: radial-gradient(circle, #1a1a1a 0%, #000 100%);
+	position: relative;
+	transition: transform 0.3s ease;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.apollo-dj-single .vinyl-record.is-playing {
+	animation: apollo-spin 3s linear infinite;
+}
+
+@keyframes apollo-spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
+.apollo-dj-single .vinyl-center {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 20%;
+	height: 20%;
+	background: #fff;
+	border-radius: 50%;
+	border: 3px solid #000;
+	z-index: 2;
+}
+
+.apollo-dj-single .vinyl-grooves {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	border-radius: 50%;
+	background: repeating-conic-gradient(
+		from 0deg,
+		transparent 0deg 2deg,
+		rgba(255, 255, 255, 0.1) 2deg 4deg
+	);
+}
+
+.apollo-dj-single .play-button {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 60px;
+	height: 60px;
+	background: rgba(0, 0, 0, 0.8);
+	border: 3px solid #fff;
+	border-radius: 50%;
+	cursor: pointer;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.3s ease;
+}
+
+.apollo-dj-single .play-button:hover {
+	background: rgba(0, 0, 0, 0.9);
+	transform: translate(-50%, -50%) scale(1.1);
+}
+
+.apollo-dj-single .play-button.is-playing {
+	background: rgba(255, 0, 0, 0.8);
+}
+
+.apollo-dj-single .play-button i {
+	color: #fff;
+	font-size: 24px;
+	margin-left: 3px; /* Offset for play icon */
+}
+
+.apollo-dj-single .player-embed {
+	display: none;
+	width: 100%;
+	height: 166px;
+	border: none;
+	margin-top: 20px;
+}
+
+.apollo-dj-single .player-embed.active {
+	display: block;
+}
+
+/* ============================================
+	DJ HERO SECTION
+	============================================ */
+.apollo-dj-single .dj-hero {
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	gap: 0;
+	border: 2px solid #000;
+	border-radius: 0;
+	margin-bottom: 0;
+}
+
+.apollo-dj-single .dj-hero-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	border-right: 2px solid #000;
+}
+
+.apollo-dj-single .dj-hero-info {
+	padding: 40px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.apollo-dj-single .dj-hero-info h1 {
+	font-size: 3rem;
+	margin: 0 0 20px 0;
+	font-weight: 700;
+}
+
+.apollo-dj-single .dj-hero-info .dj-bio {
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: var(--text-secondary, #666);
+	margin-bottom: 30px;
+}
+
+.apollo-dj-single .dj-social-links {
+	display: flex;
+	gap: 15px;
+	flex-wrap: wrap;
+}
+
+.apollo-dj-single .dj-social-links a {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 10px 20px;
+	background: var(--bg-secondary, #f5f5f5);
+	border: 2px solid #000;
+	border-radius: 0;
+	text-decoration: none;
+	color: var(--text-primary, #000);
+	transition: all 0.2s ease;
+	font-weight: 500;
+}
+
+.apollo-dj-single .dj-social-links a:hover {
+	background: #000;
+	color: #fff;
+	transform: translateY(-2px);
+}
+
+/* ============================================
+	RESPONSIVE
+	============================================ */
+@media (max-width: 768px) {
+	.apollo-dj-single .dj-hero {
+		grid-template-columns: 1fr;
+	}
+
+	.apollo-dj-single .dj-hero-image {
+		border-right: none;
+		border-bottom: 2px solid #000;
+	}
+
+	.apollo-dj-single .bento-grid {
+		grid-template-columns: 1fr;
+	}
+}
+
+/* ============================================
+	ANALYTICS BADGE
+	============================================ */
+.apollo-dj-single .analytics-badge {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	background: rgba(0, 0, 0, 0.8);
+	color: #fff;
+	padding: 10px 15px;
+	border-radius: 0;
+	border: 2px solid #fff;
+	font-size: 0.85rem;
+	z-index: 1000;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.apollo-dj-single .analytics-badge i {
+	font-size: 1.2em;
+}
+
+/* Page wrapper */
+.apollo-dj-single .page-wrap {
+	max-width: 1400px;
+	margin: 0 auto;
+	padding: 0;
+}

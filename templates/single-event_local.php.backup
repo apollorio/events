@@ -1,0 +1,487 @@
+<?php
+// phpcs:ignoreFile
+/**
+ * Template: Single Local Page
+ *
+ * Features:
+ * - Mapa OSM (OpenStreetMap) usando Leaflet.js
+ * - Mini galeria de imagens selecionadas (_local_image_1 até _local_image_5)
+ * - Listagem de eventos futuros que usam este local
+ *
+ * @package Apollo_Events_Manager
+ * @version 2.0.0
+ */
+
+defined('ABSPATH') || exit;
+
+require_once plugin_dir_path(__FILE__) . '../includes/helpers/event-data-helper.php';
+
+// This template generates complete HTML structure - no header needed
+
+$local_id = get_the_ID();
+if (get_post_type($local_id) !== 'event_local') {
+    wp_die(__('Este template é apenas para Locais.', 'apollo-events-manager'));
+}
+
+// ============================================
+// GET LOCAL DATA
+// ============================================
+$local_name = apollo_get_post_meta($local_id, '_local_name', true) ?: get_the_title();
+
+// Add data attribute for cursor trail effect
+$local_name_attrs  = ' data-cursor-trail="true"';
+$local_description = apollo_get_post_meta($local_id, '_local_description', true) ?: get_the_content();
+$local_address     = apollo_get_post_meta($local_id, '_local_address', true);
+$local_city        = apollo_get_post_meta($local_id, '_local_city', true);
+$local_state       = apollo_get_post_meta($local_id, '_local_state', true);
+$local_region      = apollo_get_post_meta($local_id, '_local_region', true);
+$local_capacity    = apollo_get_post_meta($local_id, '_local_capacity', true);
+
+// Get coordinates - try multiple meta keys
+$local_lat = apollo_get_post_meta($local_id, '_local_latitude', true);
+if (empty($local_lat)) {
+    $local_lat = apollo_get_post_meta($local_id, '_local_lat', true);
+}
+
+$local_lng = apollo_get_post_meta($local_id, '_local_longitude', true);
+if (empty($local_lng)) {
+    $local_lng = apollo_get_post_meta($local_id, '_local_lng', true);
+}
+
+// Get local images (up to 5)
+$local_images = [];
+for ($i = 1; $i <= 5; $i++) {
+    $img = apollo_get_post_meta($local_id, '_local_image_' . $i, true);
+    if (! empty($img)) {
+        // Handle both URL and attachment ID
+        if (is_numeric($img)) {
+            $img_url = wp_get_attachment_url($img);
+            if ($img_url) {
+                $local_images[] = $img_url;
+            }
+        } else {
+            $local_images[] = $img;
+        }
+    }
+}
+
+// Get featured image if no custom images
+if (empty($local_images) && has_post_thumbnail($local_id)) {
+    $local_images[] = get_the_post_thumbnail_url($local_id, 'large');
+}
+
+// ============================================
+// GET FUTURE EVENTS FOR THIS LOCAL
+// ============================================
+$today         = date('Y-m-d');
+$future_events = get_posts(
+    [
+        'post_type'      => 'event_listing',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'meta_query'     => [
+            [
+                'key'     => '_event_local_ids',
+                'value'   => strval($local_id),
+                'compare' => '=',
+            ],
+            [
+                'key'     => '_event_start_date',
+                'value'   => $today,
+                'compare' => '>=',
+            ],
+        ],
+        'meta_key' => '_event_start_date',
+        'orderby'  => 'meta_value',
+        'order'    => 'ASC',
+    ]
+);
+
+// Fallback: try serialized array search
+if (empty($future_events)) {
+    $future_events = get_posts(
+        [
+            'post_type'      => 'event_listing',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'meta_query'     => [
+                [
+                    'key'     => '_event_local_ids',
+                    'value'   => serialize(strval($local_id)),
+                    'compare' => 'LIKE',
+                ],
+                [
+                    'key'     => '_event_start_date',
+                    'value'   => $today,
+                    'compare' => '>=',
+                ],
+            ],
+            'meta_key' => '_event_start_date',
+            'orderby'  => 'meta_value',
+            'order'    => 'ASC',
+        ]
+    );
+}//end if
+
+// Enqueue Leaflet.js for map
+wp_enqueue_script('leaflet', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js', [], '1.9.4', true);
+wp_enqueue_style('leaflet-css', 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css', [], '1.9.4');
+
+// Enqueue Tailwind CSS if available
+if (function_exists('apollo_shadcn_enqueue')) {
+    apollo_shadcn_enqueue();
+}
+
+?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+	<meta charset="<?php bloginfo('charset'); ?>">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title><?php echo esc_html($local_name); ?> | Apollo Events</title>
+	<?php wp_head(); ?>
+	
+	<style>
+	/* Local Single Page Styles */
+	.apollo-local-single {
+		max-width: 1400px;
+		margin: 0 auto;
+		padding: 2rem;
+	}
+	
+	.local-header {
+		margin-bottom: 3rem;
+	}
+	
+	.local-header h1 {
+		font-size: 3rem;
+		font-weight: 700;
+		margin-bottom: 1rem;
+		color: var(--wp--preset--color--contrast, #111);
+	}
+	
+	.local-meta {
+		display: flex;
+		gap: 1.5rem;
+		flex-wrap: wrap;
+		margin-bottom: 1.5rem;
+		color: var(--wp--preset--color--contrast-2, #666);
+	}
+	
+	.local-meta-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	
+	.local-description {
+		font-size: 1.1rem;
+		line-height: 1.8;
+		color: var(--wp--preset--color--contrast, #111);
+		margin-bottom: 2rem;
+	}
+	
+	/* Map Container */
+	.local-map-container {
+		margin-bottom: 3rem;
+		border-radius: 12px;
+		overflow: hidden;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		height: 400px;
+		background: #f0f0f0;
+	}
+	
+	#localMap {
+		width: 100%;
+		height: 100%;
+	}
+	
+	/* Image Gallery */
+	.local-gallery {
+		margin-bottom: 3rem;
+	}
+	
+	.local-gallery-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin-bottom: 1.5rem;
+		color: var(--wp--preset--color--contrast, #111);
+	}
+	
+	.local-gallery-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		gap: 1rem;
+	}
+	
+	.local-gallery-item {
+		position: relative;
+		aspect-ratio: 16 / 9;
+		overflow: hidden;
+		border-radius: 8px;
+		cursor: pointer;
+		transition: transform 0.3s ease;
+	}
+	
+	.local-gallery-item:hover {
+		transform: scale(1.05);
+	}
+	
+	.local-gallery-item img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	
+	/* Events List */
+	.local-events-section {
+		margin-bottom: 3rem;
+	}
+	
+	.local-events-title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		margin-bottom: 1.5rem;
+		color: var(--wp--preset--color--contrast, #111);
+	}
+	
+	.local-events-list {
+		display: grid;
+		gap: 1.5rem;
+	}
+	
+	.local-event-card {
+		padding: 1.5rem;
+		border: 1px solid var(--wp--preset--color--contrast-3, #ddd);
+		border-radius: 8px;
+		transition: all 0.3s ease;
+		background: var(--wp--preset--color--base-2, #fff);
+	}
+	
+	.local-event-card:hover {
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+		transform: translateY(-2px);
+	}
+	
+	.local-event-card a {
+		text-decoration: none;
+		color: inherit;
+	}
+	
+	.local-event-title {
+		font-size: 1.25rem;
+		font-weight: 600;
+		margin-bottom: 0.5rem;
+		color: var(--wp--preset--color--contrast, #111);
+	}
+	
+	.local-event-date {
+		color: var(--wp--preset--color--contrast-2, #666);
+		font-size: 0.9rem;
+	}
+	
+	.no-events {
+		padding: 2rem;
+		text-align: center;
+		color: var(--wp--preset--color--contrast-2, #666);
+		background: var(--wp--preset--color--base, #f9f9f9);
+		border-radius: 8px;
+	}
+	
+	@media (max-width: 768px) {
+		.apollo-local-single {
+			padding: 1rem;
+		}
+		
+		.local-header h1 {
+			font-size: 2rem;
+		}
+		
+		.local-gallery-grid {
+			grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+		}
+	}
+	</style>
+</head>
+<body <?php body_class('apollo-local-single'); ?>>
+
+<main class="apollo-local-single">
+	
+	<!-- Local Header -->
+	<header class="local-header">
+		<h1<?php echo esc_attr($local_name_attrs); ?>><?php echo esc_html($local_name); ?></h1>
+		
+		<div class="local-meta">
+			<?php if ($local_address) : ?>
+				<div class="local-meta-item" data-reveal="true" data-reveal-delay="100">
+					<i class="ri-map-pin-line"></i>
+					<span><?php echo esc_html($local_address); ?></span>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ($local_city || $local_state) : ?>
+				<div class="local-meta-item">
+					<i class="ri-building-line"></i>
+					<span>
+						<?php
+                        echo esc_html(trim(($local_city ?: '') . ($local_city && $local_state ? ', ' : '') . ($local_state ?: '')));
+			    ?>
+					</span>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ($local_capacity) : ?>
+				<div class="local-meta-item">
+					<i class="ri-group-line"></i>
+					<span><?php echo esc_html(number_format_i18n($local_capacity)); ?> pessoas</span>
+				</div>
+			<?php endif; ?>
+		</div>
+		
+		<?php if ($local_description) : ?>
+			<div class="local-description">
+				<?php echo wp_kses_post(wpautop($local_description)); ?>
+			</div>
+		<?php endif; ?>
+	</header>
+	
+	<!-- Map Section -->
+	<?php
+    if (! empty($local_lat) && ! empty($local_lng) && is_numeric($local_lat) && is_numeric($local_lng)) :
+        $lat_float = (float) $local_lat;
+        $lng_float = (float) $local_lng;
+
+        if ($lat_float >= -90 && $lat_float <= 90 && $lng_float >= -180 && $lng_float <= 180) :
+            ?>
+		<div class="local-map-container">
+			<div id="localMap" data-lat="<?php echo esc_attr($lat_float); ?>" data-lng="<?php echo esc_attr($lng_float); ?>"></div>
+		</div>
+		
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			if (typeof L === 'undefined') {
+				console.error('❌ Leaflet library not loaded!');
+				return;
+			}
+			
+			const mapEl = document.getElementById('localMap');
+			if (!mapEl) return;
+			
+			const lat = parseFloat(mapEl.dataset.lat);
+			const lng = parseFloat(mapEl.dataset.lng);
+			
+			console.log('✅ Leaflet loaded. Initializing map with coords:', lat, lng);
+			
+			try {
+				var map = L.map('localMap', {
+				zoomControl: false, 
+				scrollWheelZoom: false,
+				dragging: false,
+				touchZoom: false,
+				doubleClickZoom: false,
+				boxZoom: false,
+				keyboard: false,
+				attributionControl: false
+			}).setView([lat, lng], 15);
+				
+				L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+					maxZoom: 19,
+					attribution: '© OpenStreetMap'
+				}).addTo(map);
+				
+				L.marker([lat, lng])
+					.addTo(map)
+					.bindPopup('<?php echo esc_js($local_name); ?>')
+					.openPopup();
+				
+				console.log('✅ Map rendered successfully');
+			} catch(e) {
+				console.error('❌ Map render error:', e);
+			}
+		});
+		</script>
+	<?php else : ?>
+		<div class="local-map-container" style="display: flex; align-items: center; justify-content: center;">
+			<p style="color: var(--wp--preset--color--contrast-2, #666);">Coordenadas inválidas</p>
+		</div>
+		<?php
+	endif;
+else :
+    ?>
+		<div class="local-map-container" style="display: flex; align-items: center; justify-content: center;">
+			<p style="color: var(--wp--preset--color--contrast-2, #666);">Mapa disponível em breve</p>
+		</div>
+	<?php endif; ?>
+	
+	<!-- Image Gallery -->
+	<?php if (! empty($local_images)) : ?>
+		<section class="local-gallery">
+			<h2 class="local-gallery-title">
+				<i class="ri-image-line"></i> Galeria
+			</h2>
+			<div class="local-gallery-grid">
+				<?php foreach ($local_images as $img_url) : ?>
+					<div class="local-gallery-item" onclick="window.open('<?php echo esc_url($img_url); ?>', '_blank')">
+						<img src="<?php echo esc_url($img_url); ?>" alt="<?php echo esc_attr($local_name); ?>" loading="lazy">
+					</div>
+				<?php endforeach; ?>
+			</div>
+		</section>
+	<?php endif; ?>
+	
+	<!-- Future Events Section -->
+	<section class="local-events-section">
+		<h2 class="local-events-title">
+			<i class="ri-calendar-event-line"></i> Próximos Eventos
+		</h2>
+		
+		<?php if (! empty($future_events)) : ?>
+			<div class="local-events-list">
+				<?php
+            foreach ($future_events as $event) :
+                $event_id         = $event->ID;
+                $event_title      = apollo_get_post_meta($event_id, '_event_title', true) ?: $event->post_title;
+                $event_start_date = apollo_get_post_meta($event_id, '_event_start_date', true);
+                $event_start_time = apollo_get_post_meta($event_id, '_event_start_time', true);
+                $event_banner     = Apollo_Event_Data_Helper::get_banner_url($event_id);
+                $event_permalink  = get_permalink($event_id);
+                ?>
+					<div class="local-event-card">
+						<a href="<?php echo esc_url($event_permalink); ?>">
+							<?php if ($event_banner) : ?>
+								<div style="margin-bottom: 1rem;">
+									<img src="<?php echo esc_url($event_banner); ?>" alt="<?php echo esc_attr($event_title); ?>" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;">
+								</div>
+							<?php endif; ?>
+							
+							<h3 class="local-event-title"><?php echo esc_html($event_title); ?></h3>
+							
+							<div class="local-event-date">
+								<?php if ($event_start_date) : ?>
+									<i class="ri-calendar-line"></i>
+									<?php echo esc_html(date_i18n('d/m/Y', strtotime($event_start_date))); ?>
+								<?php endif; ?>
+								
+								<?php if ($event_start_time) : ?>
+									<span style="margin-left: 0.5rem;">
+										<i class="ri-time-line"></i>
+										<?php echo esc_html($event_start_time); ?>
+									</span>
+								<?php endif; ?>
+							</div>
+						</a>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		<?php else : ?>
+			<div class="no-events">
+				<i class="ri-calendar-line" style="font-size: 3rem; color: var(--wp--preset--color--contrast-3, #A4A4A4); margin-bottom: 1rem;"></i>
+				<p>Nenhum evento futuro agendado para este local.</p>
+			</div>
+		<?php endif; ?>
+	</section>
+
+</main>
+
+</body>
+</html>
