@@ -1,0 +1,34 @@
+{
+  "name": "apollo-events-manager",
+  "version": "0.1.0",
+  "description": "Apollo Events Manager - WordPress Plugin with Motion.dev + ShadCN + Tailwind",
+  "private": true,
+  "scripts": {
+    "build": "tailwindcss -i ./assets/css/input.css -o ./assets/css/tailwind-output.css --minify",
+    "build:watch": "tailwindcss -i ./assets/css/input.css -o ./assets/css/tailwind-output.css --watch",
+    "watch": "npm run build:watch",
+    "dev": "npm run build:watch",
+    "build:prod": "NODE_ENV=production tailwindcss -i ./assets/css/input.css -o ./assets/css/tailwind-output.css --minify"
+  },
+  "dependencies": {
+    "framer-motion": "^11.0.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-tabs": "^1.0.0",
+    "@radix-ui/react-dialog": "^1.0.0"
+  },
+  "keywords": [
+    "wordpress",
+    "events",
+    "motion",
+    "shadcn",
+    "tailwind"
+  ],
+  "author": "Apollo::Rio",
+  "license": "GPL-2.0-or-later"
+}
+

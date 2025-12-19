@@ -1,0 +1,14 @@
+Array
+(
+    [events] => Array
+        (
+            [0] => ⚠️ Event #30 (Fetsa Rara): Missing _event_local_ids
+        )
+
+    [locals] => Array
+        (
+            [0] => ⚠️ Local #95 (dedge): Missing coordinates (lat: , lng: )
+            [1] => ⚠️ Local #95 (dedge): Missing address
+        )
+
+)
